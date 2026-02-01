@@ -25,7 +25,12 @@ app = FastAPI(title="Bone Fracture Detection API")
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:5173",
+        "https://fracture-vision-2-0.vercel.app",
+        "https://fracture-vision-2-0-git-main-yashrajranmode02s-projects.vercel.app",
+        "https://fracture-vision-2-0-r87ot3yg7-yashrajranmode02s-projects.vercel.app"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
