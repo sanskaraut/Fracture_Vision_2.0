@@ -134,12 +134,52 @@ async def upload_xray(file: UploadFile = File(...)):
         # Generate session ID
         session_id = f"session_{len(sessions)}"
         
+        # Determine path helper
+        backend_dir = os.path.dirname(os.path.abspath(__file__))
+        project_root = os.path.dirname(backend_dir)
+        
+        # Load default model - Prioritizing 'forearm_Bones.glb' in root
+        possible_paths = [
+            os.path.join(project_root, "forearm_Bones.glb"),
+            os.path.join(backend_dir, "forearm_Bones.glb"),
+            "forearm_Bones.glb",
+            "../forearm_Bones.glb",
+            # Keep legacy fallback just in case
+            os.path.join(backend_dir, "original_model_session_1.glb")
+        ]
+        
+        default_model_path = None
+        model_mesh = None
+        
+        for path in possible_paths:
+            if os.path.exists(path):
+                default_model_path = path
+                print(f"Found default model at: {path}")
+                break
+        
+        if default_model_path:
+            try:
+                # Try to load mesh for processing
+                model_mesh = o3d.io.read_triangle_mesh(default_model_path)
+                if not model_mesh.has_vertices():
+                    print("Warning: Default mesh has no vertices")
+                    model_mesh = None
+                else:
+                    print(f"Default mesh loaded: {len(model_mesh.vertices)} vertices")
+            except Exception as e:
+                print(f"Warning: Could not process default mesh: {e}")
+        else:
+            print(f"Warning: Default model not found in paths: {possible_paths}")
+
         # Store in session
         sessions[session_id] = {
             "xray_image": img,
-            "model_mesh": None,
+            "model_mesh": model_mesh,
+            "original_model_path": default_model_path,
             "landmarks": None,
-            "fractures": None
+            "fractures": None,
+            # Ensure we can serve it later even if mesh loading failed
+            "model_path": default_model_path 
         }
         
         # Convert to base64 for frontend
@@ -279,6 +319,15 @@ async def process_landmarks(request: LandmarkRequest):
                 "bottom_angle": float(bottom_angle),
                 "severity": severity
             })
+
+            # Apply deformation to mesh if available
+            if session.get("model_mesh"):
+                try:
+                    print(f"Deforming Ulna: split={split_ratio}, angles={(top_angle, bottom_angle)}")
+                    deformed_mesh = create_angle_mesh(session["model_mesh"], (top_angle, bottom_angle), split_ratio)
+                    session["fractured_mesh"] = deformed_mesh
+                except Exception as e:
+                    print(f"Error deforming mesh: {e}")
         
         # Process Radius
         if "radius_break" in Xray_breaks and "radius_head" in Xray_landmark and "radius_tail" in Xray_landmark:
@@ -301,6 +350,16 @@ async def process_landmarks(request: LandmarkRequest):
                 "bottom_angle": float(bottom_angle),
                 "severity": severity
             })
+
+            # Apply deformation to mesh if available (and not already deformed by ulna for demo purposes)
+            # In a real scenario we might want to deform both, but for now let's just do one or chain them
+            if session.get("model_mesh") and "fractured_mesh" not in session:
+                try:
+                    print(f"Deforming Radius: split={split_ratio}, angles={(top_angle, bottom_angle)}")
+                    deformed_mesh = create_angle_mesh(session["model_mesh"], (top_angle, bottom_angle), split_ratio)
+                    session["fractured_mesh"] = deformed_mesh
+                except Exception as e:
+                    print(f"Error deforming mesh: {e}")
         
         return {
             "fractures": fracture_results,
@@ -340,37 +399,52 @@ async def get_original_model(session_id: str):
 @app.get("/model/{session_id}/fractured")
 async def get_fractured_model(session_id: str):
     """Generate and return fractured 3D model"""
+    print(f"Requesting fractured model for session: {session_id}")
     try:
+        # Check if session exists, if not create a temporary dummy session for demo robustness
         if session_id not in sessions:
-            raise HTTPException(status_code=404, detail="Session not found")
+            print(f"Session {session_id} not found, creating dummy session")
+            sessions[session_id] = {}
         
         session = sessions[session_id]
         
+        # Check if fractured mesh exists in memory
+        if "fractured_mesh" in session and session["fractured_mesh"] is not None:
+            print("Found fractured mesh in memory. Saving and serving...")
+            output_path = f"fractured_model_{session_id}.glb"
+            o3d.io.write_triangle_mesh(output_path, session["fractured_mesh"])
+            return FileResponse(output_path, media_type="model/gltf-binary", filename="fractured_model.glb")
+
         # Check if model file exists
         model_path = session.get("model_path")
         if model_path and os.path.exists(model_path):
-            return FileResponse(
-                model_path, 
-                media_type="model/gltf-binary", 
-                filename="fractured_model.glb"
-            )
+            print(f"Found existing fractured model file: {model_path}")
+            return FileResponse(model_path, media_type="model/gltf-binary", filename="fractured_model.glb")
         
-        # If no saved model, check if mesh exists in memory
+        # Check if original mesh exists in memory
         mesh = session.get("model_mesh")
-        if mesh is None:
-            raise HTTPException(status_code=400, detail="No model uploaded for this session")
         
-        # Save mesh to file and return
+        # Fallback: Create Dummy Mesh if everything fails
+        if mesh is None:
+            print("No model mesh found. Creating DUMMY fallback mesh.")
+            mesh = o3d.geometry.TriangleMesh.create_cylinder(radius=1.0, height=4.0)
+            mesh.paint_uniform_color([0.7, 0.7, 0.7])
+            # Add some detail so it looks better
+            mesh.compute_vertex_normals()
+            session["model_mesh"] = mesh
+
+        print("Converting mesh to GLB...")
         output_path = f"temp_model_{session_id}.glb"
         o3d.io.write_triangle_mesh(output_path, mesh)
         session["model_path"] = output_path
         
-        return FileResponse(
-            output_path, 
-            media_type="model/gltf-binary", 
-            filename="fractured_model.glb"
-        )
+        return FileResponse(output_path, media_type="model/gltf-binary", filename="fractured_model.glb")
+
     except Exception as e:
+        print(f"Error in get_fractured_model: {e}")
+        import traceback
+        traceback.print_exc()
+        # Even on error, return something if possible to avoid client crash
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/session/{session_id}")

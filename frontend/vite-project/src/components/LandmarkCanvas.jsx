@@ -187,7 +187,7 @@
 
 //   return (
 //     <div className="flex flex-col items-center">
-      
+
 //       {/* STATUS */}
 //       <div className="mb-3 text-sm font-semibold text-gray-700">
 //         {points.length < 4
@@ -304,14 +304,21 @@ export default function LandmarkCanvas({ image, sessionId, onSubmit }) {
       ctx.arc(x, y, 7, 0, Math.PI * 2);
       ctx.fill();
 
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = "rgba(0, 0, 0, 0.6)";
+      ctx.strokeText(index + 1, x, y);
+
       ctx.fillStyle = "#ffffff";
       ctx.font = "bold 13px Arial";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(index + 1, x, y);
 
-      ctx.fillStyle = "#111827";
-      ctx.font = "13px Arial";
+      ctx.lineWidth = 3;
+      ctx.strokeText(LANDMARK_LABELS[index], x + 10, y - 10);
+
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "bold 13px Arial";
       ctx.textAlign = "left";
       ctx.fillText(LANDMARK_LABELS[index], x + 10, y - 10);
     });
@@ -355,19 +362,18 @@ export default function LandmarkCanvas({ image, sessionId, onSubmit }) {
   return (
     <div className="flex flex-col items-center w-full">
 
-      <div className="mb-4 font-semibold text-gray-700">
+      <div className="mb-4 font-medium text-blue-200 bg-blue-500/10 px-4 py-2 rounded-full border border-blue-500/20">
         {points.length < 4
-          ? `Landmark ${points.length + 1} of 4: ${LANDMARK_LABELS[points.length]}`
+          ? `Mark: ${LANDMARK_LABELS[points.length]} (${points.length + 1}/4)`
           : "All landmarks selected"}
       </div>
 
-      <div className="w-full max-w-5xl h-[420px] border rounded-xl bg-gray-50 flex justify-center items-center overflow-hidden">
+      <div className="w-full h-[420px] flex justify-center items-center overflow-hidden relative">
         <canvas
           ref={canvasRef}
           onClick={handleClick}
-          className={`cursor-crosshair ${
-            points.length >= 4 ? "cursor-not-allowed opacity-90" : ""
-          }`}
+          className={`cursor-crosshair ${points.length >= 4 ? "cursor-not-allowed opacity-90" : ""
+            }`}
         />
       </div>
 
@@ -375,14 +381,14 @@ export default function LandmarkCanvas({ image, sessionId, onSubmit }) {
         <button
           onClick={handleSubmit}
           disabled={processing}
-          className="mt-6 bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700"
+          className="mt-6 bg-gradient-to-r from-green-500 to-emerald-600 text-white px-8 py-3 rounded-xl font-bold hover:shadow-lg hover:shadow-green-500/20 transition-all transform hover:-translate-y-1"
         >
-          {processing ? "Processing..." : "Detect Fracture"}
+          {processing ? "Processing Fracture..." : "Analyze Fracture"}
         </button>
       )}
 
-      <p className="mt-2 text-xs text-gray-500">
-        Click accurately on anatomical landmarks
+      <p className="mt-4 text-xs text-slate-500">
+        Click on the X-ray to place markers. Precision affects diagnosis accuracy.
       </p>
     </div>
   );

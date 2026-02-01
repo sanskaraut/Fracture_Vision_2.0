@@ -1,4 +1,4 @@
-const API_BASE = "http://localhost:8000";
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 export async function uploadXray(file) {
   const fd = new FormData();
@@ -37,5 +37,5 @@ export async function processLandmarks(sessionId, landmarks) {
 }
 
 export function getModelUrl(sessionId) {
-  return `${API_BASE}/model/${sessionId}/original?t=${Date.now()}`;
+  return `${API_BASE}/model/${sessionId}/fractured?t=${Date.now()}`;
 }

@@ -1,53 +1,31 @@
-
-import { useState } from "react";
+import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
+import { AnimatePresence } from "framer-motion";
 import UploadXray from "./pages/UploadXray";
 import MarkLandmarks from "./pages/MarkLandmarks";
 import Report from "./pages/Report";
 import VisualizeModel from "./pages/VisualizeModel";
 
-export default function App() {
-  const [page, setPage] = useState("upload");
-  const [sessionId, setSessionId] = useState(null);
-  const [xrayImage, setXrayImage] = useState(null);
-  const [fractureData, setFractureData] = useState(null);
+function AnimatedRoutes() {
+  const location = useLocation();
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      {page === "upload" && (
-        <UploadXray
-          onNext={(sid, img) => {
-            setSessionId(sid);
-            setXrayImage(img);
-            setPage("landmarks");
-          }}
-        />
-      )}
+    <AnimatePresence mode="wait">
+      <Routes location={location} key={location.pathname}>
+        <Route path="/" element={<UploadXray />} />
+        <Route path="/landmarks" element={<MarkLandmarks />} />
+        <Route path="/report" element={<Report />} />
+        <Route path="/visualize" element={<VisualizeModel />} />
+      </Routes>
+    </AnimatePresence>
+  );
+}
 
-      {page === "landmarks" && (
-        <MarkLandmarks
-          sessionId={sessionId}
-          xrayImage={xrayImage}
-          onDone={(data) => {
-            setFractureData(data);
-            setPage("report");
-          }}
-        />
-      )}
-
-      {page === "report" && (
-        <Report
-          data={fractureData}
-          onVisualize={() => setPage("visualize")}
-          onReset={() => setPage("upload")}
-        />
-      )}
-
-      {page === "visualize" && (
-        <VisualizeModel
-          sessionId={sessionId}
-          onBack={() => setPage("report")}
-        />
-      )}
-    </div>
+export default function App() {
+  return (
+    <Router>
+      <div className="min-h-screen bg-slate-900 text-white font-sans antialiased selection:bg-blue-500/30">
+        <AnimatedRoutes />
+      </div>
+    </Router>
   );
 }

@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+python-multipart
+numpy
+opencv-python-headless
+open3d
+ultralytics
+pydantic
+Pillow
+websockets
