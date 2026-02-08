@@ -1,0 +1,17 @@
+.env
+*.glb
+*.pt
+!yolo_fracture.pt
+models/*.pt
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info
+dist/
+build/
+*.log
+.DS_Store
