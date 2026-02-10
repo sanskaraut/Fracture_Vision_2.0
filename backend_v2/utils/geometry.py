@@ -9,6 +9,7 @@ import open3d as o3d
 def angle_from_negative_x(p1, p2, center=(0, 0)):
     """
     Calculate angle from negative X-axis between two points
+    Implementation from ML developer's notebook
     
     Args:
         p1: First point (x, y)
@@ -20,42 +21,50 @@ def angle_from_negative_x(p1, p2, center=(0, 0)):
     """
     x1, y1 = p1[0] - center[0], p1[1] - center[1]
     x2, y2 = p2[0] - center[0], p2[1] - center[1]
-    
     dx, dy = x2 - x1, y2 - y1
     
-    angle = math.degrees(math.atan2(dy, dx)) % 360
-    angle = (angle - 180) % 360
+    angle_rad = math.atan2(dy, dx)
+    angle_deg = math.degrees(angle_rad) % 360
+    angle_from_neg_x = (angle_deg - 180) % 360
     
-    if angle <= 90:
-        return -(90 - angle)
-    elif angle <= 180:
-        return angle - 90
-    elif angle <= 270:
-        return 270 - angle
+    if angle_from_neg_x <= 90:
+        return -(90 - angle_from_neg_x)
     
-    return 360 - angle
+    elif angle_from_neg_x <= 180:
+        return angle_from_neg_x - 90
+    
+    elif angle_from_neg_x <= 270:
+        return 270 - angle_from_neg_x
+    
+    return 360 - angle_from_neg_x
 
 
-def get_relative_position(head, tail, fracture):
+def get_split_ratio(point_top, point_bottom, split_point):
     """
-    Calculate relative position of fracture point between head and tail
+    Calculate relative position of fracture point between top and bottom
+    Implementation from ML developer's notebook
     
     Args:
-        head: Head point (x, y)
-        tail: Tail point (x, y)
-        fracture: Fracture point (x, y)
+        point_top: Top point (x, y)
+        point_bottom: Bottom point (x, y)
+        split_point: Fracture point (x, y)
         
     Returns:
         Relative position as ratio (0.0 to 1.0)
     """
-    y1, y2, y3 = head[1], tail[1], fracture[1]
+    y_top, y_bottom, y_split = point_top[1], point_bottom[1], split_point[1]
     
-    if y1 < y2:
-        y1, y2 = y2, y1
+    if y_top < y_bottom:
+        y_top, y_bottom = y_bottom, y_top
     
-    h = y1 - y2
-    
-    return 1 - (y1 - y3) / h if h else 0
+    total_height = y_top - y_bottom
+    return 1 - (y_top - y_split) / total_height if total_height else 0
+
+
+# Alias for backward compatibility
+def get_relative_position(head, tail, fracture):
+    """Backward compatible alias for get_split_ratio"""
+    return get_split_ratio(head, tail, fracture)
 
 
 def create_angle_mesh(mesh, angles, split_ratio):

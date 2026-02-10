@@ -19,6 +19,7 @@ import time
 
 from utils.geometry import angle_from_negative_x, get_relative_position, create_angle_mesh
 from utils.yolo_detector import FractureDetector
+from utils.medical_rag import get_medical_analysis
 
 # Load environment variables
 load_dotenv()
@@ -439,11 +440,25 @@ async def process_landmarks(request: LandmarkRequest):
         for fr in fracture_results:
             print(f"   • {fr['bone'].upper()}: {fr['severity']} severity (angles: {fr['top_angle']:.1f}°, {fr['bottom_angle']:.1f}°)")
         
-        return {
+        # Perform medical analysis (RAG-based)
+        medical_analysis = None
+        if fracture_results:
+            print("🔬 Running medical analysis...")
+            medical_analysis = get_medical_analysis(fracture_results)
+            if medical_analysis:
+                print(f"✅ Medical analysis: {len(medical_analysis.get('most_likely_damaged_structures', []))} structures identified")
+        
+        response = {
             "fractures": fracture_results,
             "confidence": 0.92 if fracture_detector and fracture_detector.is_loaded else 0.75,
             "detected_bones": [f["bone"] for f in fracture_results]
         }
+        
+        # Add medical analysis if available
+        if medical_analysis:
+            response["medical_analysis"] = medical_analysis
+        
+        return response
         
     except Exception as e:
         print(f"❌ Error in process_landmarks: {e}")

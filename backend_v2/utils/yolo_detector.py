@@ -11,12 +11,12 @@ from typing import Dict, Tuple, Optional
 class FractureDetector:
     """YOLO-based fracture detector for X-ray images"""
     
-    def __init__(self, model_path: str = "./models/best.pt"):
+    def __init__(self, model_path: str = "./models/extracted/best"):
         """
         Initialize fracture detector with YOLO model
         
         Args:
-            model_path: Path to YOLO model file
+            model_path: Path to YOLO model file or directory
         """
         self.model_path = model_path
         self.model = None
@@ -64,6 +64,7 @@ class FractureDetector:
     ) -> Dict[str, Tuple[int, int]]:
         """
         Detect fractures in X-ray image
+        Implementation from ML developer's notebook
         
         Args:
             image: Input X-ray image (numpy array)
@@ -78,34 +79,46 @@ class FractureDetector:
         
         try:
             # Run YOLO detection
-            results = self.model(image)[0]
+            results = self.model(image)
+            boxes = results[0].boxes.xyxy.cpu().numpy()
             
-            fractures = {}
+            h, w = image.shape[:2]
             cx, cy = center
             
-            if len(results.boxes) > 0:
-                for box in results.boxes:
-                    x1, y1, x2, y2 = box.xyxy[0].tolist()
+            Xray_breaks = {}
+            
+            if len(boxes) == 0:
+                print("❌ No fractures detected.")
+            elif len(boxes) == 1:
+                # Single fracture detected
+                x1, y1, x2, y2 = boxes[0]
+                x_center = (x1 + x2) / 2
+                y_center = (y1 + y2) / 2
+                if x_center < cx:
+                    Xray_breaks['radius_break'] = (int(x_center - cx), int((h // 2) - y_center))
+                    print("→ radius fracture")
+                else:
+                    Xray_breaks['ulna_break'] = (int(x_center - cx), int((h // 2) - y_center))
+                    print("→ ulna fracture")
+            else:
+                # Multiple fractures detected
+                for box in boxes:
+                    x1, y1, x2, y2 = box
                     x_center = (x1 + x2) / 2
                     y_center = (y1 + y2) / 2
-                    
-                    # Convert to centered coordinates
-                    rel_x = int(x_center - cx)
-                    rel_y = int(cy - y_center)
-                    
-                    # Classify based on X position
-                    # Left side = radius, Right side = ulna
-                    if x_center < cx and 'radius_break' not in fractures:
-                        fractures['radius_break'] = (rel_x, rel_y)
-                    elif x_center >= cx and 'ulna_break' not in fractures:
-                        fractures['ulna_break'] = (rel_x, rel_y)
+                    if x_center < cx and 'radius_break' not in Xray_breaks:
+                        Xray_breaks['radius_break'] = (int(x_center - cx), int((h // 2) - y_center))
+                        print("→ radius fracture")
+                    elif x_center >= cx and 'ulna_break' not in Xray_breaks:
+                        Xray_breaks['ulna_break'] = (int(x_center - cx), int((h // 2) - y_center))
+                        print("→ ulna fracture")
             
-            if fractures:
-                print(f"✅ Detected {len(fractures)} fracture(s): {list(fractures.keys())}")
-            else:
-                print("⚠️ No fractures detected by YOLO")
+            if Xray_breaks:
+                print(f"\n--> Detected Fracture Points (centered):")
+                for k, v in Xray_breaks.items():
+                    print(f"{k} → {v}")
             
-            return fractures
+            return Xray_breaks
             
         except Exception as e:
             print(f"❌ Error during YOLO detection: {e}")

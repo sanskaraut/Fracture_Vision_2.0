@@ -13,3 +13,4 @@ torch
 torchvision
 ultralytics
 groq
+langchain-groq

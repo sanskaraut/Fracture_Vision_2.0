@@ -20,7 +20,7 @@ export default function MarkLandmarks() {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white">
         <p>No Session Data. Please Start Over.</p>
-        <button onClick={() => navigate("/")} className="ml-4 text-blue-400 underline">Go Home</button>
+        <button onClick={() => navigate("/dashboard")} className="ml-4 text-blue-400 underline">Go to Dashboard</button>
       </div>
     );
   }

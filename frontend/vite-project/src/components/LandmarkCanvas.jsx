@@ -221,6 +221,7 @@
 // }
 import { useEffect, useRef, useState } from "react";
 import { processLandmarks } from "../api";
+import { Undo } from "lucide-react";
 
 const LANDMARK_LABELS = [
   "Ulna Head",
@@ -299,28 +300,55 @@ export default function LandmarkCanvas({ image, sessionId, onSubmit }) {
       const x = p.x * scale;
       const y = p.y * scale;
 
+      // Draw circle
       ctx.fillStyle = "#ef4444";
       ctx.beginPath();
       ctx.arc(x, y, 7, 0, Math.PI * 2);
       ctx.fill();
 
+      // Draw number with black outline
+      ctx.strokeStyle = "rgba(0, 0, 0, 0.7)";
       ctx.lineWidth = 3;
-      ctx.strokeStyle = "rgba(0, 0, 0, 0.6)";
-      ctx.strokeText(index + 1, x, y);
-
-      ctx.fillStyle = "#ffffff";
       ctx.font = "bold 13px Arial";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(index + 1, x, y);
-
-      ctx.lineWidth = 3;
-      ctx.strokeText(LANDMARK_LABELS[index], x + 10, y - 10);
+      ctx.strokeText(index + 1, x, y);
 
       ctx.fillStyle = "#ffffff";
-      ctx.font = "bold 13px Arial";
-      ctx.textAlign = "left";
-      ctx.fillText(LANDMARK_LABELS[index], x + 10, y - 10);
+      ctx.fillText(index + 1, x, y);
+
+      // Smart label positioning to avoid edge clipping
+      const labelText = LANDMARK_LABELS[index];
+      const labelWidth = ctx.measureText(labelText).width;
+      const padding = 10;
+
+      // Determine label position based on available space
+      let labelX = x + padding;
+      let labelY = y - padding;
+      let textAlign = "left";
+
+      // Check right edge
+      if (labelX + labelWidth > canvas.width - 5) {
+        labelX = x - padding;
+        textAlign = "right";
+      }
+
+      // Check top edge
+      if (labelY < 15) {
+        labelY = y + padding + 15;
+      }
+
+      // Check bottom edge
+      if (labelY > canvas.height - 5) {
+        labelY = y - padding;
+      }
+
+      // Draw label with black outline (FIXED: Smart positioning)
+      ctx.textAlign = textAlign;
+      ctx.strokeText(labelText, labelX, labelY);
+
+      ctx.fillStyle = "#ffffff";
+      ctx.fillText(labelText, labelX, labelY);
     });
   }, [points, scale]);
 
@@ -336,6 +364,14 @@ export default function LandmarkCanvas({ image, sessionId, onSubmit }) {
     const y = (e.clientY - rect.top) / scale;
 
     setPoints([...points, { x, y }]);
+  };
+
+  // ===============================
+  // UNDO HANDLER
+  // ===============================
+  const handleUndo = () => {
+    if (points.length === 0) return;
+    setPoints(points.slice(0, -1));
   };
 
   // ===============================
@@ -377,18 +413,32 @@ export default function LandmarkCanvas({ image, sessionId, onSubmit }) {
         />
       </div>
 
-      {points.length === 4 && (
-        <button
-          onClick={handleSubmit}
-          disabled={processing}
-          className="mt-6 bg-gradient-to-r from-green-500 to-emerald-600 text-white px-8 py-3 rounded-xl font-bold hover:shadow-lg hover:shadow-green-500/20 transition-all transform hover:-translate-y-1"
-        >
-          {processing ? "Processing Fracture..." : "Analyze Fracture"}
-        </button>
-      )}
+      <div className="flex gap-4 mt-6">
+        {/* Undo Button */}
+        {points.length > 0 && (
+          <button
+            onClick={handleUndo}
+            className="bg-slate-700 hover:bg-slate-600 text-white px-6 py-3 rounded-xl font-semibold transition-all flex items-center space-x-2 border border-slate-600"
+          >
+            <Undo className="w-5 h-5" />
+            <span>Undo ({points.length})</span>
+          </button>
+        )}
+
+        {/* Submit Button */}
+        {points.length === 4 && (
+          <button
+            onClick={handleSubmit}
+            disabled={processing}
+            className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-8 py-3 rounded-xl font-bold hover:shadow-lg hover:shadow-green-500/20 transition-all transform hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {processing ? "Processing Fracture..." : "Analyze Fracture"}
+          </button>
+        )}
+      </div>
 
       <p className="mt-4 text-xs text-slate-500">
-        Click on the X-ray to place markers. Precision affects diagnosis accuracy.
+        Click on the X-ray to place markers. Use Undo to remove the last marker.
       </p>
     </div>
   );

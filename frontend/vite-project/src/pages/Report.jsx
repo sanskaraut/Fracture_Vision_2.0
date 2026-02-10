@@ -10,7 +10,7 @@ export default function Report() {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white">
         <p>No Report Data. Please Start Over.</p>
-        <button onClick={() => navigate("/")} className="ml-4 text-blue-400 underline">Go Home</button>
+        <button onClick={() => navigate("/dashboard")} className="ml-4 text-blue-400 underline">Go to Dashboard</button>
       </div>
     );
   }
@@ -132,6 +132,64 @@ export default function Report() {
           ))}
         </div>
 
+        {/* MEDICAL ANALYSIS - NEW SECTION */}
+        {data.medical_analysis && (
+          <div className="mb-10 bg-gradient-to-br from-rose-500/10 to-orange-500/10 border border-rose-500/20 rounded-2xl p-6">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-rose-500/20 flex items-center justify-center">
+                <svg className="w-6 h-6 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <div className="flex-grow">
+                <h2 className="text-xl font-bold text-rose-300 mb-2">
+                  ⚕️ At-Risk Anatomical Structures
+                </h2>
+                <p className="text-sm text-slate-400">
+                  AI-identified structures that may be damaged based on fracture pattern
+                </p>
+              </div>
+            </div>
+
+            {/* Damaged Structures List */}
+            <div className="flex flex-wrap gap-2 mb-4">
+              {data.medical_analysis.most_likely_damaged_structures?.map((structure, i) => (
+                <span
+                  key={i}
+                  className="px-4 py-2 rounded-lg bg-rose-500/20 border border-rose-500/30 text-rose-200 font-semibold capitalize flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                  {structure}
+                </span>
+              ))}
+            </div>
+
+            {/* Clinical Explanation */}
+            {data.medical_analysis.explanation && (
+              <div className="bg-black/20 rounded-xl p-4 border border-white/5">
+                <h3 className="text-sm font-semibold text-slate-300 mb-2 uppercase tracking-wider">
+                  Clinical Assessment
+                </h3>
+                <p className="text-sm text-slate-300 leading-relaxed">
+                  {data.medical_analysis.explanation}
+                </p>
+              </div>
+            )}
+
+            {/* Disclaimer */}
+            <div className="mt-4 flex items-start gap-2 text-xs text-slate-500">
+              <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+              </svg>
+              <span>
+                This AI-generated analysis is for informational purposes only and should be verified by a qualified healthcare professional.
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* ACTION BUTTONS */}
         <div className="flex flex-col sm:flex-row gap-4">
           <button
@@ -142,7 +200,7 @@ export default function Report() {
           </button>
 
           <button
-            onClick={() => navigate("/")}
+            onClick={() => navigate("/dashboard")}
             className="flex-1 bg-slate-800 text-slate-300 border border-slate-700 py-4 rounded-xl font-bold hover:bg-slate-700 hover:text-white transition-all"
           >
             Start New Analysis
